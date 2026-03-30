@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Fastvin X50: Scaling Heat</title>
+    <title>Asphalt 1 BETA</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Orbitron', sans-serif; color: white; }
@@ -11,10 +11,10 @@
         #lobby-menu { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; background: radial-gradient(circle, #111 0%, #000 100%); pointer-events: auto; }
         .panel { width: 340px; background: rgba(10,10,10,0.95); border: 2px solid #4facfe; padding: 25px; border-radius: 15px; }
         
-        #game-hud { position: absolute; inset: 0; display: none; padding: 30px; }
-        #progress-track { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); width: 60%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; }
-        .tracker-icon { position: absolute; width: 12px; height: 12px; border-radius: 50%; top: -4px; transition: left 0.1s; border: 2px solid #000; }
-        #player-icon { background: #4facfe; z-index: 5; box-shadow: 0 0 10px #4facfe; }
+        #game-hud { position: absolute; inset: 0; display: none; padding: 20px; }
+        #progress-track { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); width: 70%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; }
+        .tracker-icon { position: absolute; width: 10px; height: 10px; border-radius: 50%; top: -3px; transition: left 0.1s; border: 1px solid #000; }
+        #player-icon { background: #4facfe; z-index: 10; width: 14px; height: 14px; top: -5px; box-shadow: 0 0 10px #4facfe; }
         .cpu-icon { background: #ff4444; }
 
         #mph-display { position: absolute; bottom: 50px; right: 60px; text-align: right; }
@@ -26,9 +26,9 @@
         #boost-label { position: absolute; top: -20px; font-size: 10px; color: #00f2ff; font-weight: bold; }
 
         #podium-screen { position: absolute; inset: 0; background: #000; display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; z-index: 100; }
-        .podium-box { display: flex; align-items: flex-end; gap: 20px; height: 300px; margin-top: 60px; }
-        .step { width: 160px; background: #111; border: 2px solid #4facfe; display: flex; flex-direction: column; align-items: center; padding-top: 20px; position: relative; }
-        .p1 { height: 240px; border-color: #ffcc00; }
+        .podium-box { display: flex; align-items: flex-end; gap: 15px; height: 250px; margin-top: 40px; }
+        .step { width: 120px; background: #111; border: 1px solid #4facfe; display: flex; flex-direction: column; align-items: center; padding-top: 10px; position: relative; font-size: 12px; }
+        .p1 { height: 200px; border-color: #ffcc00; border-width: 2px; }
         
         button { background: #4facfe; border: none; color: white; padding: 12px; font-family: 'Orbitron'; cursor: pointer; font-weight: bold; width: 100%; border-radius: 5px; margin-top: 5px; transition: 0.2s; }
         .active-sel { background: #4facfe !important; box-shadow: 0 0 15px #4facfe; }
@@ -45,7 +45,7 @@
         <div class="panel">
             <h3 style="color:#4facfe; margin:0 0 15px 0;">GARAGE</h3>
             <input type="text" id="driver-name" placeholder="DRIVER NAME">
-            <button onclick="startRace()" style="background:#4facfe; color:white; margin-bottom:10px;">START 100KM RACE</button>
+            <button onclick="startRace()" style="background:#4facfe; color:white; margin-bottom:10px;">START 7-CAR RACE</button>
             <div id="car-list" style="max-height: 250px; overflow-y: auto;"></div>
             <button id="promo-btn" onclick="redeemCode()">REDEEM PROMO CODE</button>
             <div id="diff-warn">AI CHALLENGE: NORMAL</div>
@@ -60,9 +60,7 @@
         <div id="countdown">3</div>
         <div id="progress-track">
             <div id="player-icon" class="tracker-icon"></div>
-            <div id="cpu1-icon" class="tracker-icon cpu-icon"></div>
-            <div id="cpu2-icon" class="tracker-icon cpu-icon"></div>
-        </div>
+            </div>
         <div id="boost-container">
             <div id="boost-label">HYBRID DRIVE</div>
             <div id="boost-bar"></div>
@@ -71,12 +69,8 @@
     </div>
 
     <div id="podium-screen">
-        <h1 id="win-status" style="color:#ffcc00; font-size: 60px; margin:0;">FINISH</h1>
-        <div class="podium-box">
-            <div class="step p2"><div id="res-2" style="position:absolute; top:-40px; width:200px; text-align:center;">---</div>2ND</div>
-            <div class="step p1"><div id="res-1" style="position:absolute; top:-40px; width:200px; text-align:center;">---</div>1ST</div>
-            <div class="step p3"><div id="res-3" style="position:absolute; top:-40px; width:200px; text-align:center;">---</div>3RD</div>
-        </div>
+        <h1 id="win-status" style="color:#ffcc00; font-size: 40px; margin:0;">RACE RESULTS</h1>
+        <div class="podium-box" id="podium-list"></div>
         <button onclick="location.reload()" style="width: 280px; margin-top: 40px;">RETURN TO GARAGE</button>
     </div>
 </div>
@@ -105,6 +99,7 @@ const carModels = [
     { name: "TAYCAN TURBO GT", price: 550000, color: "#8e44ad", speed: 92, acc: 0.78, hybrid: true },
     { name: "MCLAREN W1", price: 1200000, color: "#ff8c00", speed: 96, acc: 0.70, hybrid: true },
     { name: "FERRARI F80", price: 1500000, color: "#ff0000", speed: 98, acc: 0.72, hybrid: true },
+    { name: "LAMBORGHINI HURACAN", price: 450000, color: "#39ff14", speed: 86, acc: 0.68, hybrid: false },
     { name: "BUGATTI", price: 2000000, color: "#00ffff", speed: 105, acc: 0.65, hybrid: false }
 ];
 
@@ -121,11 +116,15 @@ let isBoosting = false;
 function redeemCode() {
     let code = prompt("ENTER PROMO CODE:");
     if (code === "#BOBGOBISTHEBEST#") { 
-        alert("PROMO REDEEMED: SPECIAL UNLOCK!"); 
-        owned[Math.floor(owned.length/2)] = true; 
+        alert("PROMO REDEEMED: LAMBORGHINI HURACÁN UNLOCKED!"); 
+        owned[15] = true; // Huracan index
         save(); updateUI(); 
     }
-    else if (code === "#HEARTBOBGOBRESPOSITORIESONGITHUB#") { alert("PROMO REDEEMED: $200,000 ADDED!"); cash += 200000; save(); updateUI(); }
+    else if (code === "#HEARTBOBGOBRESPOSITORIESONGITHUB#") { 
+        alert("PROMO REDEEMED: $200,000 ADDED!"); 
+        cash += 200000; 
+        save(); updateUI(); 
+    }
 }
 
 const RACE_DIST = 1000000; 
@@ -136,16 +135,13 @@ let keys = {};
 let state = "LOBBY";
 let active = false;
 let isCountingDown = false;
-let jumpStartDetected = false;
 let shake = 0;
 
 function updateUI() {
     document.getElementById("cash-display").innerText = "$" + cash.toLocaleString();
     document.getElementById("car-name-top").innerText = carModels[selIdx].name;
     const warn = document.getElementById("diff-warn");
-    if(player.model.speed > 95) warn.innerText = "AI CHALLENGE: INSANE";
-    else if(player.model.speed > 85) warn.innerText = "AI CHALLENGE: HARD";
-    else warn.innerText = "AI CHALLENGE: NORMAL";
+    warn.innerText = player.model.speed > 85 ? "AI CHALLENGE: HARD" : "AI CHALLENGE: NORMAL";
 
     const list = document.getElementById("car-list"); list.innerHTML = "";
     carModels.forEach((m, i) => {
@@ -167,18 +163,34 @@ function startRace() {
     dName = document.getElementById('driver-name').value || "DRIVER";
     localStorage.setItem('f_name', dName);
     state = "RACE"; player.dist = 0; player.speed = 0; active = false;
-    isCountingDown = true; jumpStartDetected = false;
+    isCountingDown = true;
     boostCharge = 100;
+    
     document.getElementById("lobby-menu").style.display = "none";
     document.getElementById("game-hud").style.display = "block";
     
-    let difficultyMultiplier = player.model.speed / 100;
-    let cpuBaseSpeed = player.model.speed * (0.92 + (difficultyMultiplier * 0.1));
+    const track = document.getElementById("progress-track");
+    // Clear old icons and re-add player icon
+    track.innerHTML = '<div id="player-icon" class="tracker-icon"></div>';
 
-    cpus = [
-        { id: 'cpu1', name: "VIPER", dist: 0, x: -0.7, speed: 0, target: cpuBaseSpeed, color: "#333", crashed: false },
-        { id: 'cpu2', name: "SHADOW", dist: 0, x: 0.7, speed: 0, target: cpuBaseSpeed + 2, color: "#666", crashed: false }
-    ];
+    cpus = [];
+    const names = ["VIPER", "SHADOW", "BLITZ", "RAZOR", "GHOST", "HUNTER"];
+    const colors = ["#333", "#666", "#900", "#009", "#090", "#990"];
+
+    for(let i=0; i<6; i++) {
+        let id = "cpu" + i;
+        track.innerHTML += `<div id="${id}-icon" class="tracker-icon cpu-icon"></div>`;
+        cpus.push({
+            id: id,
+            name: names[i],
+            dist: 0,
+            x: -1.2 + (i * 0.5), // Distribute across track
+            speed: 0,
+            target: player.model.speed * (0.85 + Math.random() * 0.15),
+            color: colors[i],
+            crashed: false
+        });
+    }
 
     let count = 3;
     const cd = document.getElementById("countdown");
@@ -188,8 +200,7 @@ function startRace() {
         count--;
         if(count > 0) cd.innerText = count;
         else if(count === 0) cd.innerText = "GO!";
-        else { cd.style.display = "none"; active = true; isCountingDown = false; clearInterval(timer); 
-               if(jumpStartDetected) { player.crashed = true; player.crashTimer = Date.now() + 1000; shake = 10; } }
+        else { cd.style.display = "none"; active = true; isCountingDown = false; clearInterval(timer); }
     }, 1000);
 }
 
@@ -205,12 +216,6 @@ function drawCar(x, y, scale, color, isWrecked, braking) {
     ctx.restore();
 }
 
-function spawnSmoke(x, y) {
-    for(let i=0; i<2; i++) {
-        particles.push({ x: x + (Math.random()-0.5)*30, y: y, vx: (Math.random()-0.5)*2, vy: -Math.random()*2, life: 1, color: "rgba(200,200,200,0.4)" });
-    }
-}
-
 function loop() {
     ctx.save();
     if(shake > 0) { ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake); shake *= 0.9; }
@@ -219,16 +224,29 @@ function loop() {
     if (state === "LOBBY") drawCar(canvas.width/2, canvas.height * 0.7, 2.2, carModels[selIdx].color, false, false);
     else if (state === "RACE") {
         if(player.dist >= RACE_DIST) { 
-            state = "PODIUM"; document.getElementById("game-hud").style.display = "none"; document.getElementById("podium-screen").style.display = "flex";
+            state = "PODIUM"; 
+            document.getElementById("game-hud").style.display = "none"; 
+            document.getElementById("podium-screen").style.display = "flex";
             let res = [{n: dName, d: player.dist}, ...cpus.map(c => ({n: c.name, d: c.dist}))].sort((a,b)=>b.d-a.d);
-            document.getElementById("res-1").innerText = res[0].n; document.getElementById("res-2").innerText = res[1].n; document.getElementById("res-3").innerText = res[2].n;
-            cash += (res[0].n === dName) ? 5000 : 1000; save(); return; 
+            
+            const pList = document.getElementById("podium-list");
+            pList.innerHTML = "";
+            res.forEach((r, i) => {
+                let h = 200 - (i * 25);
+                pList.innerHTML += `<div class="step ${i===0?'p1':''}" style="height:${h}px">
+                    <div style="position:absolute; top:-30px; width:100%; text-align:center;">${r.n}</div>
+                    ${i+1}${i===0?'ST':i===1?'ND':i===2?'RD':'TH'}
+                </div>`;
+            });
+            
+            if(res[0].n === dName) cash += 8000;
+            else if (res[1].n === dName) cash += 3000;
+            else cash += 1000;
+            save(); return; 
         }
 
         const isHybrid = player.model.hybrid;
         document.getElementById("boost-container").style.display = isHybrid ? "block" : "none";
-
-        if(isCountingDown && (keys.arrowup || keys.w || keys.shift)) jumpStartDetected = true;
 
         let braking = false;
         if(active && !player.crashed) {
@@ -236,24 +254,19 @@ function loop() {
             let currentAcc = player.model.acc;
 
             if (isHybrid && keys.shift && boostCharge > 0 && (keys.arrowup || keys.w)) {
-                isBoosting = true;
-                currentMax += 15;
-                currentAcc *= 2.2;
-                boostCharge -= 0.6;
-                shake = 3; 
+                isBoosting = true; currentMax += 15; currentAcc *= 2.2; boostCharge -= 0.6; shake = 3; 
             } else {
                 isBoosting = false; if (boostCharge < 100) boostCharge += 0.15;
             }
 
             if(keys.arrowup || keys.w) {
                 player.speed = Math.min(player.speed + currentAcc, currentMax);
-                if(player.dist < 2000) spawnSmoke(canvas.width/2, canvas.height-140);
             } else { player.speed *= 0.985; braking = true; }
             if(keys.arrowleft || keys.a) player.worldX -= 0.07;
             if(keys.arrowright || keys.d) player.worldX += 0.07;
             document.getElementById("boost-bar").style.width = boostCharge + "%";
         } else if (player.crashed) {
-            player.speed *= 0.95; braking = true; isBoosting = false;
+            player.speed *= 0.95; braking = true;
             if(Date.now() > player.crashTimer) player.crashed = false;
         }
 
@@ -264,26 +277,22 @@ function loop() {
         cpus.forEach(c => {
             if(active) {
                 if(!c.crashed) {
-                    c.speed = Math.min(c.speed + (0.2 + (player.model.speed/200)), c.target);
-                    if(player.model.speed > 80 && Math.abs(c.dist - player.dist) < 5000) c.x += (player.worldX - c.x) * 0.005;
+                    c.speed = Math.min(c.speed + 0.3, c.target);
                 } else { c.speed *= 0.92; if(Date.now() > c.crashTimer) c.crashed = false; }
             }
             c.dist += c.speed * 19;
             document.getElementById(c.id+"-icon").style.left = (c.dist / RACE_DIST * 100) + "%";
-            if(Math.abs(c.dist - player.dist) < 1200 && Math.abs(c.x - player.worldX) < 0.6) {
-                if(player.dist < c.dist) { player.crashed = true; player.crashTimer = Date.now() + 800; player.speed *= 0.4; shake = 20; }
-                else { c.crashed = true; c.crashTimer = Date.now() + 1500; c.speed *= 0.2; player.speed += 5; }
+            
+            // Simplified Collision
+            if(Math.abs(c.dist - player.dist) < 1500 && Math.abs(c.x - player.worldX) < 0.5) {
+                player.crashed = true; player.crashTimer = Date.now() + 800; player.speed *= 0.5; shake = 15;
             }
         });
 
-        particles.forEach((p, i) => {
-            ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.life*12, 0, Math.PI*2); ctx.fill();
-            p.x += p.vx; p.y += p.vy; p.life -= 0.03;
-            if(p.life <= 0) particles.splice(i, 1);
-        });
-
+        // Road Draw
         ctx.fillStyle = "#151515"; ctx.beginPath();
         ctx.moveTo(canvas.width/2 - 800, canvas.height); ctx.lineTo(canvas.width/2, canvas.height*0.4); ctx.lineTo(canvas.width/2+800, canvas.height); ctx.fill();
+        
         cpus.forEach(c => {
             let pZ = c.dist - player.dist;
             if(pZ > -2000 && pZ < 40000) {
@@ -292,10 +301,7 @@ function loop() {
             }
         });
 
-        if (isBoosting) { 
-            ctx.shadowBlur = 30; 
-            ctx.shadowColor = "#00f2ff"; 
-        }
+        if (isBoosting) { ctx.shadowBlur = 30; ctx.shadowColor = "#00f2ff"; }
         drawCar(canvas.width/2, canvas.height-180, 1.4, player.model.color, player.crashed, braking);
         ctx.shadowBlur = 0;
 
@@ -305,14 +311,8 @@ function loop() {
 }
 
 function save() { localStorage.setItem('f_cash', cash); localStorage.setItem('f_owned', JSON.stringify(owned)); localStorage.setItem('f_sel', selIdx); localStorage.setItem('f_name', dName); }
-window.onkeydown = e => { 
-    keys[e.key.toLowerCase()] = true; 
-    if(e.key === "Shift") keys.shift = true;
-};
-window.onkeyup = e => { 
-    keys[e.key.toLowerCase()] = false; 
-    if(e.key === "Shift") keys.shift = false;
-};
+window.onkeydown = e => { keys[e.key.toLowerCase()] = true; if(e.key === "Shift") keys.shift = true; };
+window.onkeyup = e => { keys[e.key.toLowerCase()] = false; if(e.key === "Shift") keys.shift = false; };
 updateUI(); loop();
 </script>
 </body>
