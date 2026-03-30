@@ -19,7 +19,7 @@
 
         #mph-display { position: absolute; bottom: 50px; right: 60px; text-align: right; }
         #mph-num { font-size: 100px; font-weight: 900; line-height: 0.8; }
-        #countdown { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 150px; font-weight: 900; color: #4facfe; display: none; }
+        #countdown { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 150px; font-weight: 900; color: #4facfe; display: none; z-index: 20; }
         
         #boost-container { position: absolute; bottom: 160px; right: 60px; width: 200px; height: 10px; background: rgba(255,255,255,0.1); border: 1px solid #00f2ff; display: none; }
         #boost-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #0077ff, #00f2ff); box-shadow: 0 0 10px #00f2ff; }
@@ -27,7 +27,7 @@
 
         #podium-screen { position: absolute; inset: 0; background: #000; display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; z-index: 100; }
         .podium-box { display: flex; align-items: flex-end; gap: 15px; height: 250px; margin-top: 40px; }
-        .step { width: 120px; background: #111; border: 1px solid #4facfe; display: flex; flex-direction: column; align-items: center; padding-top: 10px; position: relative; font-size: 12px; }
+        .step { width: 110px; background: #111; border: 1px solid #4facfe; display: flex; flex-direction: column; align-items: center; padding-top: 10px; position: relative; font-size: 11px; }
         .p1 { height: 200px; border-color: #ffcc00; border-width: 2px; }
         
         button { background: #4facfe; border: none; color: white; padding: 12px; font-family: 'Orbitron'; cursor: pointer; font-weight: bold; width: 100%; border-radius: 5px; margin-top: 5px; transition: 0.2s; }
@@ -35,7 +35,7 @@
         input { background: #1a1a1a; border: 1px solid #333; color: white; padding: 12px; font-family: 'Orbitron'; width: 88%; margin-bottom: 12px; }
         
         #promo-btn { background: #ffcc00; color: #000; margin-top: 15px; font-size: 12px; }
-        #diff-warn { color: #ff4444; font-size: 10px; margin-top: 10px; text-align: center; font-weight: bold; }
+        #car-list { max-height: 250px; overflow-y: auto; scrollbar-width: thin; }
     </style>
 </head>
 <body>
@@ -45,10 +45,9 @@
         <div class="panel">
             <h3 style="color:#4facfe; margin:0 0 15px 0;">GARAGE</h3>
             <input type="text" id="driver-name" placeholder="DRIVER NAME">
-            <button onclick="startRace()" style="background:#4facfe; color:white; margin-bottom:10px;">START 7-CAR RACE</button>
-            <div id="car-list" style="max-height: 250px; overflow-y: auto;"></div>
+            <button onclick="startRace()" style="background:#4facfe; color:white; margin-bottom:10px;">ENTER TOURNAMENT</button>
+            <div id="car-list"></div>
             <button id="promo-btn" onclick="redeemCode()">REDEEM PROMO CODE</button>
-            <div id="diff-warn">AI CHALLENGE: NORMAL</div>
         </div>
         <div style="text-align:right;">
             <h1 id="car-name-top" style="font-size: 40px; margin:0; width: 500px; overflow: hidden;">CAR NAME</h1>
@@ -60,7 +59,7 @@
         <div id="countdown">3</div>
         <div id="progress-track">
             <div id="player-icon" class="tracker-icon"></div>
-            </div>
+        </div>
         <div id="boost-container">
             <div id="boost-label">HYBRID DRIVE</div>
             <div id="boost-bar"></div>
@@ -114,16 +113,14 @@ let boostCharge = 100;
 let isBoosting = false;
 
 function redeemCode() {
-    let code = prompt("ENTER PROMO CODE:");
+    let code = prompt("ENTER PROMO CODE:").toUpperCase();
     if (code === "#BOBGOBISTHEBEST#") { 
-        alert("PROMO REDEEMED: LAMBORGHINI HURACÁN UNLOCKED!"); 
-        owned[15] = true; // Huracan index
-        save(); updateUI(); 
+        alert("UNLOCKED: LAMBORGHINI HURACÁN!"); 
+        owned[15] = true; save(); updateUI(); 
     }
-    else if (code === "#HEARTBOBGOBRESPOSITORIESONGITHUB#") { 
-        alert("PROMO REDEEMED: $200,000 ADDED!"); 
-        cash += 200000; 
-        save(); updateUI(); 
+    else if (code === "#HEARTBOBGOBRESPOSITORIES#") { 
+        alert("REWARD: $200,000 ADDED!"); 
+        cash += 200000; save(); updateUI(); 
     }
 }
 
@@ -140,9 +137,6 @@ let shake = 0;
 function updateUI() {
     document.getElementById("cash-display").innerText = "$" + cash.toLocaleString();
     document.getElementById("car-name-top").innerText = carModels[selIdx].name;
-    const warn = document.getElementById("diff-warn");
-    warn.innerText = player.model.speed > 85 ? "AI CHALLENGE: HARD" : "AI CHALLENGE: NORMAL";
-
     const list = document.getElementById("car-list"); list.innerHTML = "";
     carModels.forEach((m, i) => {
         let isSel = (selIdx === i);
@@ -162,15 +156,13 @@ function buyCar(i) { if(cash >= carModels[i].price) { cash -= carModels[i].price
 function startRace() {
     dName = document.getElementById('driver-name').value || "DRIVER";
     localStorage.setItem('f_name', dName);
-    state = "RACE"; player.dist = 0; player.speed = 0; active = false;
-    isCountingDown = true;
-    boostCharge = 100;
+    state = "RACE"; player.dist = 0; player.speed = 0; player.worldX = 0; player.crashed = false;
+    active = false; isCountingDown = true; boostCharge = 100;
     
     document.getElementById("lobby-menu").style.display = "none";
     document.getElementById("game-hud").style.display = "block";
     
     const track = document.getElementById("progress-track");
-    // Clear old icons and re-add player icon
     track.innerHTML = '<div id="player-icon" class="tracker-icon"></div>';
 
     cpus = [];
@@ -183,10 +175,10 @@ function startRace() {
         cpus.push({
             id: id,
             name: names[i],
-            dist: 0,
-            x: -1.2 + (i * 0.5), // Distribute across track
+            dist: -3000 * (i+1), // Start behind player
+            x: (i % 2 === 0 ? -0.8 : 0.8), // Staggered spread
             speed: 0,
-            target: player.model.speed * (0.85 + Math.random() * 0.15),
+            target: player.model.speed * (0.88 + Math.random() * 0.12),
             color: colors[i],
             crashed: false
         });
@@ -228,20 +220,15 @@ function loop() {
             document.getElementById("game-hud").style.display = "none"; 
             document.getElementById("podium-screen").style.display = "flex";
             let res = [{n: dName, d: player.dist}, ...cpus.map(c => ({n: c.name, d: c.dist}))].sort((a,b)=>b.d-a.d);
-            
-            const pList = document.getElementById("podium-list");
-            pList.innerHTML = "";
+            const pList = document.getElementById("podium-list"); pList.innerHTML = "";
             res.forEach((r, i) => {
-                let h = 200 - (i * 25);
+                let h = 200 - (i * 20);
                 pList.innerHTML += `<div class="step ${i===0?'p1':''}" style="height:${h}px">
                     <div style="position:absolute; top:-30px; width:100%; text-align:center;">${r.n}</div>
-                    ${i+1}${i===0?'ST':i===1?'ND':i===2?'RD':'TH'}
+                    ${i+1}
                 </div>`;
             });
-            
-            if(res[0].n === dName) cash += 8000;
-            else if (res[1].n === dName) cash += 3000;
-            else cash += 1000;
+            if(res[0].n === dName) cash += 8000; else cash += 1000;
             save(); return; 
         }
 
@@ -252,21 +239,18 @@ function loop() {
         if(active && !player.crashed) {
             let currentMax = player.model.speed;
             let currentAcc = player.model.acc;
-
             if (isHybrid && keys.shift && boostCharge > 0 && (keys.arrowup || keys.w)) {
                 isBoosting = true; currentMax += 15; currentAcc *= 2.2; boostCharge -= 0.6; shake = 3; 
             } else {
                 isBoosting = false; if (boostCharge < 100) boostCharge += 0.15;
             }
-
-            if(keys.arrowup || keys.w) {
-                player.speed = Math.min(player.speed + currentAcc, currentMax);
-            } else { player.speed *= 0.985; braking = true; }
+            if(keys.arrowup || keys.w) player.speed = Math.min(player.speed + currentAcc, currentMax);
+            else { player.speed *= 0.985; braking = true; }
             if(keys.arrowleft || keys.a) player.worldX -= 0.07;
             if(keys.arrowright || keys.d) player.worldX += 0.07;
             document.getElementById("boost-bar").style.width = boostCharge + "%";
         } else if (player.crashed) {
-            player.speed *= 0.95; braking = true;
+            player.speed *= 0.95; 
             if(Date.now() > player.crashTimer) player.crashed = false;
         }
 
@@ -276,20 +260,19 @@ function loop() {
         
         cpus.forEach(c => {
             if(active) {
-                if(!c.crashed) {
-                    c.speed = Math.min(c.speed + 0.3, c.target);
-                } else { c.speed *= 0.92; if(Date.now() > c.crashTimer) c.crashed = false; }
+                if(!c.crashed) c.speed = Math.min(c.speed + 0.3, c.target);
+                else { c.speed *= 0.92; if(Date.now() > c.crashTimer) c.crashed = false; }
             }
             c.dist += c.speed * 19;
-            document.getElementById(c.id+"-icon").style.left = (c.dist / RACE_DIST * 100) + "%";
+            document.getElementById(c.id+"-icon").style.left = (Math.max(0, c.dist) / RACE_DIST * 100) + "%";
             
-            // Simplified Collision
-            if(Math.abs(c.dist - player.dist) < 1500 && Math.abs(c.x - player.worldX) < 0.5) {
+            // Only check collision if race is ACTIVE
+            if(active && Math.abs(c.dist - player.dist) < 1500 && Math.abs(c.x - player.worldX) < 0.5) {
                 player.crashed = true; player.crashTimer = Date.now() + 800; player.speed *= 0.5; shake = 15;
             }
         });
 
-        // Road Draw
+        // Road
         ctx.fillStyle = "#151515"; ctx.beginPath();
         ctx.moveTo(canvas.width/2 - 800, canvas.height); ctx.lineTo(canvas.width/2, canvas.height*0.4); ctx.lineTo(canvas.width/2+800, canvas.height); ctx.fill();
         
@@ -304,7 +287,6 @@ function loop() {
         if (isBoosting) { ctx.shadowBlur = 30; ctx.shadowColor = "#00f2ff"; }
         drawCar(canvas.width/2, canvas.height-180, 1.4, player.model.color, player.crashed, braking);
         ctx.shadowBlur = 0;
-
         document.getElementById("mph-num").innerText = Math.floor(player.speed * 4.8);
     }
     ctx.restore(); requestAnimationFrame(loop);
