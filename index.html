@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Asphalt 1: The New Arising</title>
+    <title>Asphalt 1: The New Arising - STABLE</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Orbitron', sans-serif; color: white; }
@@ -21,8 +21,8 @@
         
         #game-hud { position: absolute; inset: 0; display: none; padding: 20px; }
         #progress-track { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); width: 70%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; }
-        .tracker-icon { position: absolute; width: 10px; height: 10px; border-radius: 50%; top: -3px; border: 1px solid #000; transition: left 0.1s linear; }
-        #player-icon { background: #4facfe; z-index: 10; width: 14px; height: 14px; top: -5px; box-shadow: 0 0 10px #4facfe; }
+        .tracker-icon { position: absolute; width: 12px; height: 12px; border-radius: 50%; top: -4px; border: 1px solid #000; display: block !important; }
+        #player-icon { background: #4facfe; z-index: 10; width: 16px; height: 16px; top: -6px; box-shadow: 0 0 10px #4facfe; }
         .cpu-icon { background: #ff4444; }
 
         #mph-display { position: absolute; bottom: 50px; right: 60px; text-align: right; }
@@ -57,14 +57,14 @@
         <div class="panel">
             <h3 style="color:#4facfe; margin:0 0 15px 0;">GARAGE</h3>
             <input type="text" id="driver-name" placeholder="DRIVER NAME">
-            <button id="race-btn" onclick="startRace()" style="background:#4facfe; color:white; margin-bottom:10px;">START RACE</button>
+            <button id="race-btn" onclick="preStartRace()" style="background:#4facfe; color:white; margin-bottom:10px;">START RACE</button>
             <div id="car-list"></div>
             <button style="background: #ffcc00; color: #000; font-size: 11px;" onclick="redeemCode()">PROMO CODE</button>
         </div>
         <div style="text-align:right;">
             <h1 id="car-name-top" style="font-size: 32px; margin:0;">CAR NAME</h1>
             <h2 id="cash-display" style="color:#ffcc00;">$0</h2>
-            <p id="boss-status" style="color:#4facfe; font-size:12px; letter-spacing:1px;"></p>
+            <p id="boss-status" style="color:#4facfe; font-size:12px;"></p>
         </div>
     </div>
 
@@ -149,10 +149,10 @@ function backToLobby() {
 }
 
 function redeemCode() {
-    let code = prompt("ENTER PROMO CODE:").toUpperCase();
-    if (usedCodes[code]) { alert("ALREADY REDEEMED"); return; }
-    if (code === "#BOBGOBISTHEBEST#") { owned[11] = true; usedCodes[code] = true; alert("HURACÁN UNLOCKED!"); }
-    else if (code === "#HEARTBOBGOBRESPOSITORIES#") { cash += 200000; usedCodes[code] = true; alert("+$200,000!"); }
+    let code = prompt("ENTER CODE:").toUpperCase();
+    if (usedCodes[code]) return;
+    if (code === "#BOBGOBISTHEBEST#") { owned[11] = true; usedCodes[code] = true; }
+    else if (code === "#HEARTBOBGOBRESPOSITORIES#") { cash += 200000; usedCodes[code] = true; }
     save(); updateUI();
 }
 
@@ -161,15 +161,14 @@ function updateUI() {
     document.getElementById("car-name-top").innerText = carModels[selIdx].name;
     document.getElementById('driver-name').value = dName;
     const isB = !bossBeaten[selIdx];
-    document.getElementById("race-btn").innerText = isB ? "BOSS CHALLENGE" : "START CAREER";
-    document.getElementById("boss-status").innerText = isB ? "BOSS CERTIFICATION REQUIRED" : "CAR CERTIFIED";
+    document.getElementById("race-btn").innerText = isB ? "BOSS CHALLENGE" : "START RACE";
     const list = document.getElementById("car-list"); list.innerHTML = "";
     carModels.forEach((m, i) => {
         let isS = (selIdx === i);
         let col = owned[i] ? (isS ? "#4facfe" : "#111") : (cash >= m.price ? "#4facfe" : "#333");
-        list.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; align-items:center;">
-            <span style="font-size:9px; width:150px;">${m.name}</span>
-            <button onclick="${owned[i]?'selectCar('+i+')':'buyCar('+i+')'}" style="width:100px; font-size:10px; background:${col}">${owned[i]?(isS?'SELECTED':'SELECT'):'$'+m.price.toLocaleString()}</button>
+        list.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span style="font-size:9px;">${m.name}</span>
+            <button onclick="${owned[i]?'selectCar('+i+')':'buyCar('+i+')'}" style="width:100px; font-size:10px; background:${col}">${owned[i]?(isS?'SEL':'BUY'):'$'+m.price}</button>
         </div>`;
     });
 }
@@ -179,51 +178,64 @@ function buyCar(i) { if(cash >= carModels[i].price) { cash -= carModels[i].price
 
 const RACE_DIST = 1000000;
 
-function startRace() {
+// NEW: Pre-start function to prevent the DOM race condition crash
+function preStartRace() {
     dName = document.getElementById('driver-name').value || "DRIVER";
     localStorage.setItem('f_name', dName);
-    state = "RACE"; active = false; player.dist = 0; player.speed = 0; player.worldX = 0; player.crashed = false; boostCharge = 100;
     
+    // Switch UI but DO NOT start logic yet
     document.getElementById("lobby-menu").style.display = "none";
     document.getElementById("game-hud").style.display = "block";
+    
     const track = document.getElementById("progress-track");
     track.innerHTML = '<div id="player-icon" class="tracker-icon"></div>';
 
     cpus = [];
     if (!bossBeaten[selIdx]) {
-        let id = "boss-icon";
-        track.innerHTML += `<div id="${id}" class="tracker-icon" style="background:#ffcc00; width:16px; height:16px; top:-6px; z-index:15;"></div>`;
-        cpus.push({ id, name: "BOSS", dist: -2000, x: 0, speed: 0, target: player.model.speed * 1.10, color: "#111", acc: player.model.acc * 1.5, isBoss: true });
+        track.innerHTML += `<div id="boss-icon" class="tracker-icon" style="background:#ffcc00; width:16px; height:16px; top:-6px;"></div>`;
+        cpus.push({ id:"boss-icon", name:"BOSS", dist:-2000, x:0, speed:0, target:player.model.speed*1.12, color:"#111", acc:player.model.acc*1.5 });
     } else {
-        const names = ["VIPER", "SHADOW", "BLITZ", "RAZOR", "GHOST", "HUNTER"];
-        for(let i=0; i<6; i++) {
+        for(let i=0; i<5; i++) {
             let id = "cpu-" + i;
             track.innerHTML += `<div id="${id}" class="tracker-icon cpu-icon"></div>`;
-            cpus.push({ id, name: names[i], dist: -5000 * (i+1), x: (i%2==0?-0.8:0.8), speed: 0, target: player.model.speed * (0.95+Math.random()*0.12), color: "#444", acc: 0.42 });
+            cpus.push({ id, name: "CPU "+(i+1), dist:-4000*(i+1), x:(i%2==0?-0.8:0.8), speed:0, target:player.model.speed*(0.9+Math.random()*0.1), color:"#444", acc:0.4 });
         }
     }
 
-    // DELAY START TO ENSURE DOM RENDERING
-    setTimeout(() => {
-        let c = 3;
-        const cd = document.getElementById("countdown");
-        cd.style.display = "block"; cd.innerText = c;
-        let t = setInterval(() => {
-            c--;
-            if(c > 0) cd.innerText = c;
-            else if(c === 0) cd.innerText = "GO!";
-            else { cd.style.display = "none"; active = true; clearInterval(t); }
-        }, 1000);
-    }, 50);
+    // Safety Delay: Wait for browser to confirm icons exist before loop hits them
+    setTimeout(startCountdown, 200);
+}
+
+function startCountdown() {
+    state = "RACE"; active = false; player.dist = 0; player.speed = 0; player.worldX = 0; player.crashed = false; boostCharge = 100;
+    let c = 3;
+    const cd = document.getElementById("countdown");
+    cd.style.display = "block"; cd.innerText = c;
+    let t = setInterval(() => {
+        c--;
+        if(c > 0) cd.innerText = c;
+        else if(c === 0) cd.innerText = "GO!";
+        else { cd.style.display = "none"; active = true; clearInterval(t); }
+    }, 1000);
 }
 
 function drawCar(x, y, scale, color, isW, brk) {
     let w = 210 * scale, h = 85 * scale;
     ctx.save(); ctx.translate(x, y);
-    if(isW) ctx.rotate((Math.random()-0.5)*0.25);
+    if(isW) ctx.rotate((Math.random()-0.5)*0.2);
+    
+    // Body
     ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(-w/2, -h/4, w, h/2, 8*scale); ctx.fill();
-    ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.beginPath(); ctx.moveTo(-w*0.2, -h/4); ctx.lineTo(w*0.2, -h/4); ctx.lineTo(w*0.12, -h/1.2); ctx.lineTo(-w*0.12, -h/1.2); ctx.fill();
-    ctx.fillStyle = brk ? "#f00" : "#500"; ctx.fillRect(-w*0.48, -h/6, w/6, h/10); ctx.fillRect(w*0.42, -h/6, w/6, h/10);
+    // Windshield
+    ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.beginPath(); ctx.moveTo(-w*0.18, -h/4); ctx.lineTo(w*0.18, -h/4); ctx.lineTo(w*0.1, -h/1.1); ctx.lineTo(-w*0.1, -h/1.1); ctx.fill();
+    
+    // FIX: Scaled Tail Lights (No more floating lights!)
+    let lightW = w * 0.15, lightH = h * 0.12;
+    ctx.fillStyle = brk ? "#ff0000" : "#660000";
+    if(brk) { ctx.shadowBlur = 15*scale; ctx.shadowColor = "red"; }
+    ctx.fillRect(-w/2 + 2*scale, -h/8, lightW, lightH); // Left
+    ctx.fillRect(w/2 - lightW - 2*scale, -h/8, lightW, lightH); // Right
+    
     ctx.restore();
 }
 
@@ -239,20 +251,12 @@ function loop() {
         if(player.dist >= RACE_DIST) {
             state = "PODIUM";
             let res = [{n: dName, d: player.dist}, ...cpus.map(c => ({n: c.name, d: c.dist}))].sort((a,b)=>b.d-a.d);
-            
-            if (!bossBeaten[selIdx] && res[0].n === dName) {
-                bossBeaten[selIdx] = true;
-                document.getElementById("win-status").innerText = "BOSS DEFEATED!";
-                cash += 20000;
-            } else {
-                document.getElementById("win-status").innerText = "RACE RESULTS";
-                cash += (res[0].n === dName) ? 12000 : 3000;
-            }
-            
+            if (!bossBeaten[selIdx] && res[0].n === dName) { bossBeaten[selIdx] = true; cash += 25000; }
+            else cash += (res[0].n === dName) ? 10000 : 2500;
             document.getElementById("game-hud").style.display = "none";
             document.getElementById("podium-screen").style.display = "flex";
             const pL = document.getElementById("podium-list"); pL.innerHTML = "";
-            res.forEach((r, i) => { if(i < 3) pL.innerHTML += `<div class="step" style="height:${180-i*40}px"><div>${r.n}</div>${i+1}</div>`; });
+            res.slice(0,3).forEach((r, i) => pL.innerHTML += `<div class="step" style="height:${180-i*40}px"><div>${r.n}</div>${i+1}</div>`);
             save(); return;
         }
 
@@ -260,10 +264,10 @@ function loop() {
         let brk = false;
         if(active && !player.crashed) {
             let m = player.model.speed, a = player.model.acc;
-            if(player.model.hybrid && keys.shift && boostCharge > 0) { isBoosting = true; m += 18; a *= 2.4; boostCharge -= 0.65; shake = 3; }
-            else { isBoosting = false; if(boostCharge < 100) boostCharge += 0.22; }
+            if(player.model.hybrid && keys.shift && boostCharge > 0) { isBoosting = true; m += 18; a *= 2.4; boostCharge -= 0.6; shake = 2; }
+            else { isBoosting = false; if(boostCharge < 100) boostCharge += 0.25; }
             if(keys.arrowup || keys.w) player.speed = Math.min(player.speed + a, m);
-            else { player.speed *= 0.982; brk = true; }
+            else { player.speed *= 0.985; brk = true; }
             if(keys.arrowleft || keys.a) player.worldX -= 0.07;
             if(keys.arrowright || keys.d) player.worldX += 0.07;
             document.getElementById("boost-bar").style.width = boostCharge + "%";
@@ -277,22 +281,22 @@ function loop() {
 
         cpus.forEach(c => {
             if(active && !c.crashed) {
-                let bnd = (player.dist - c.dist > 3500) ? 1.25 : 1.0;
+                let bnd = (player.dist - c.dist > 4000) ? 1.3 : 1.0;
                 c.speed = Math.min(c.speed + (c.acc || 0.4), c.target * bnd);
             }
             c.dist += c.speed * 19.8;
             let ci = document.getElementById(c.id);
             if(ci) ci.style.left = (Math.max(0, c.dist) / RACE_DIST * 100) + "%";
-            
             if(active && !c.crashed && !player.crashed && Math.abs(c.dist-player.dist) < 1400 && Math.abs(c.x-player.worldX) < 0.45) {
-                player.crashed = true; player.crashTimer = Date.now() + 900; player.speed *= 0.4; shake = 15;
+                player.crashed = true; player.crashTimer = Date.now() + 800; player.speed *= 0.4; shake = 15;
             }
         });
 
+        // Track drawing
         ctx.fillStyle = "#151515"; ctx.beginPath(); ctx.moveTo(canvas.width/2-800, canvas.height); ctx.lineTo(canvas.width/2, canvas.height*0.4); ctx.lineTo(canvas.width/2+800, canvas.height); ctx.fill();
         cpus.forEach(c => {
             let pZ = c.dist - player.dist;
-            if(pZ > -2500 && pZ < 45000) {
+            if(pZ > -2500 && pZ < 40000) {
                 let s = canvas.height / Math.max(100, pZ + 5000);
                 drawCar(canvas.width/2 + (c.x-player.worldX)*s*600, (canvas.height*0.4)+(s*400), s*2.7, c.color, c.crashed, false);
             }
