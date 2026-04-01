@@ -82,7 +82,7 @@
     <div id="podium-screen">
         <h1 style="color:#ffcc00; font-size: 40px; margin:0;">RACE RESULTS</h1>
         <div class="podium-box" id="podium-list"></div>
-        <button onclick="location.reload()" style="width: 280px; margin-top: 40px;">RETURN TO GARAGE</button>
+        <button onclick="backToLobby()" style="width: 280px; margin-top: 40px;">RETURN TO GARAGE</button>
     </div>
 </div>
 
@@ -115,13 +115,11 @@ const carModels = [
     { name: "BUGATTI BOLIDE", price: 5000000, color: "#00d4ff", speed: 112, acc: 0.95, hybrid: false }
 ];
 
-// DATA LOADING
 let cash = parseInt(localStorage.getItem('f_cash')) || 0;
 let owned = JSON.parse(localStorage.getItem('f_owned')) || new Array(carModels.length).fill(false);
 owned[0] = true;
 let selIdx = parseInt(localStorage.getItem('f_sel')) || 0;
 let dName = localStorage.getItem('f_name') || "ACE";
-// Load used codes tracker
 let usedCodes = JSON.parse(localStorage.getItem('f_used_codes')) || {};
 
 let boostCharge = 100;
@@ -140,26 +138,19 @@ function enterLobby() {
     updateUI();
 }
 
+function backToLobby() {
+    document.getElementById("podium-screen").style.display = "none";
+    document.getElementById("lobby-menu").style.display = "flex";
+    state = "LOBBY";
+    updateUI();
+}
+
 function redeemCode() {
     let code = prompt("ENTER PROMO CODE:").toUpperCase();
-    
-    if (usedCodes[code]) {
-        alert("THIS CODE HAS ALREADY BEEN USED!");
-        return;
-    }
-
-    if (code === "#BOBGOBISTHEBEST#") { 
-        owned[11] = true; 
-        usedCodes[code] = true;
-        save(); updateUI(); alert("UNLOCKED: HURACÁN!"); 
-    }
-    else if (code === "#HEARTBOBGOBRESPOSITORIES#") { 
-        cash += 200000; 
-        usedCodes[code] = true;
-        save(); updateUI(); alert("ADDED: $200,000!"); 
-    } else {
-        alert("INVALID CODE");
-    }
+    if (usedCodes[code]) { alert("THIS CODE HAS ALREADY BEEN USED!"); return; }
+    if (code === "#BOBGOBISTHEBEST#") { owned[11] = true; usedCodes[code] = true; save(); updateUI(); alert("UNLOCKED: HURACÁN!"); }
+    else if (code === "#HEARTBOBGOBRESPOSITORIES#") { cash += 200000; usedCodes[code] = true; save(); updateUI(); alert("ADDED: $200,000!"); }
+    else { alert("INVALID CODE"); }
 }
 
 const RACE_DIST = 1000000; 
@@ -203,18 +194,7 @@ function startRace() {
     for(let i=0; i<6; i++) {
         let id = "cpu" + i;
         track.innerHTML += `<div id="${id}-icon" class="tracker-icon cpu-icon"></div>`;
-        let xPos = (i % 2 === 0) ? -0.8 : 0.8; 
-        let staggerBack = -5000 * (i + 1); 
-        cpus.push({
-            id: id,
-            name: names[i],
-            dist: staggerBack, 
-            x: xPos,
-            speed: 0,
-            target: player.model.speed * (0.88 + Math.random() * 0.12),
-            color: colors[i],
-            crashed: false
-        });
+        cpus.push({ id: id, name: names[i], dist: -5000 * (i + 1), x: (i % 2 === 0) ? -0.8 : 0.8, speed: 0, target: player.model.speed * (0.88 + Math.random() * 0.12), color: colors[i], crashed: false });
     }
 
     let count = 3;
@@ -257,10 +237,7 @@ function loop() {
             const pList = document.getElementById("podium-list"); pList.innerHTML = "";
             res.forEach((r, i) => {
                 let h = 200 - (i * 20);
-                pList.innerHTML += `<div class="step ${i===0?'p1':''}" style="height:${h}px">
-                    <div style="position:absolute; top:-30px; width:100%; text-align:center;">${r.n}</div>
-                    ${i+1}
-                </div>`;
+                pList.innerHTML += `<div class="step ${i===0?'p1':''}" style="height:${h}px"><div style="position:absolute; top:-30px; width:100%; text-align:center;">${r.n}</div>${i+1}</div>`;
             });
             if(res[0].n === dName) cash += 10000; else cash += 2000;
             save(); return; 
@@ -299,7 +276,6 @@ function loop() {
             }
             c.dist += c.speed * 19;
             document.getElementById(c.id+"-icon").style.left = (Math.max(0, c.dist) / RACE_DIST * 100) + "%";
-            
             if(active && c.dist > -1000 && Math.abs(c.dist - player.dist) < 1500 && Math.abs(c.x - player.worldX) < 0.5) {
                 player.crashed = true; player.crashTimer = Date.now() + 800; player.speed *= 0.5; shake = 15;
             }
@@ -307,7 +283,6 @@ function loop() {
 
         ctx.fillStyle = "#151515"; ctx.beginPath();
         ctx.moveTo(canvas.width/2 - 800, canvas.height); ctx.lineTo(canvas.width/2, canvas.height*0.4); ctx.lineTo(canvas.width/2+800, canvas.height); ctx.fill();
-        
         cpus.forEach(c => {
             let pZ = c.dist - player.dist;
             if(pZ > -2500 && pZ < 40000) {
@@ -315,7 +290,6 @@ function loop() {
                 drawCar(canvas.width/2 + (c.x - player.worldX) * s * 600, (canvas.height*0.4)+(s*400), s*2.8, c.color, c.crashed, false);
             }
         });
-
         if (isBoosting) { ctx.shadowBlur = 30; ctx.shadowColor = "#00f2ff"; }
         drawCar(canvas.width/2, canvas.height-180, 1.4, player.model.color, player.crashed, braking);
         ctx.shadowBlur = 0;
@@ -324,13 +298,7 @@ function loop() {
     ctx.restore(); requestAnimationFrame(loop);
 }
 
-function save() { 
-    localStorage.setItem('f_cash', cash); 
-    localStorage.setItem('f_owned', JSON.stringify(owned)); 
-    localStorage.setItem('f_sel', selIdx); 
-    localStorage.setItem('f_name', dName); 
-    localStorage.setItem('f_used_codes', JSON.stringify(usedCodes));
-}
+function save() { localStorage.setItem('f_cash', cash); localStorage.setItem('f_owned', JSON.stringify(owned)); localStorage.setItem('f_sel', selIdx); localStorage.setItem('f_name', dName); localStorage.setItem('f_used_codes', JSON.stringify(usedCodes)); }
 window.onkeydown = e => { keys[e.key.toLowerCase()] = true; if(e.key === "Shift") keys.shift = true; };
 window.onkeyup = e => { keys[e.key.toLowerCase()] = false; if(e.key === "Shift") keys.shift = false; };
 loop();
