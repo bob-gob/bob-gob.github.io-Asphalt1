@@ -8,7 +8,17 @@
         canvas { display: block; width: 100vw; height: 100vh; position: absolute; z-index: 1; }
         #ui-layer { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
         
-        #lobby-menu { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; background: radial-gradient(circle, #111 0%, #000 100%); pointer-events: auto; }
+        /* Splash Screen */
+        #splash-screen { 
+            position: absolute; inset: 0; 
+            background: radial-gradient(circle, #1a1a1a 0%, #000 100%); 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            z-index: 200; pointer-events: auto;
+        }
+        #splash-screen h1 { font-size: 60px; text-align: center; margin-bottom: 40px; color: #4facfe; text-shadow: 0 0 20px #4facfe; }
+
+        /* Lobby/Garage */
+        #lobby-menu { position: absolute; inset: 0; display: none; align-items: center; justify-content: space-between; padding: 0 40px; background: radial-gradient(circle, #111 0%, #000 100%); pointer-events: auto; }
         .panel { width: 340px; background: rgba(10,10,10,0.95); border: 2px solid #4facfe; padding: 25px; border-radius: 15px; }
         
         #game-hud { position: absolute; inset: 0; display: none; padding: 20px; }
@@ -30,22 +40,28 @@
         .step { width: 110px; background: #111; border: 1px solid #4facfe; display: flex; flex-direction: column; align-items: center; padding-top: 10px; position: relative; font-size: 11px; }
         .p1 { height: 200px; border-color: #ffcc00; border-width: 2px; }
         
-        button { background: #4facfe; border: none; color: white; padding: 12px; font-family: 'Orbitron'; cursor: pointer; font-weight: bold; width: 100%; border-radius: 5px; margin-top: 5px; transition: 0.2s; }
+        button { background: #4facfe; border: none; color: white; padding: 15px; font-family: 'Orbitron'; cursor: pointer; font-weight: bold; width: 100%; border-radius: 5px; margin-top: 5px; transition: 0.2s; font-size: 14px; }
+        button:hover { filter: brightness(1.2); }
         .active-sel { background: #4facfe !important; box-shadow: 0 0 15px #4facfe; }
         input { background: #1a1a1a; border: 1px solid #333; color: white; padding: 12px; font-family: 'Orbitron'; width: 88%; margin-bottom: 12px; }
         
-        #promo-btn { background: #ffcc00; color: #000; margin-top: 15px; font-size: 12px; }
+        #promo-btn { background: #ffcc00; color: #000; margin-top: 15px; font-size: 12px; padding: 8px; }
         #car-list { max-height: 250px; overflow-y: auto; scrollbar-width: thin; }
     </style>
 </head>
 <body>
 
 <div id="ui-layer">
+    <div id="splash-screen">
+        <h1>ASPHALT 1:<br>THE NEW ARISING</h1>
+        <button onclick="enterLobby()" style="width: 250px; font-size: 24px;">PLAY</button>
+    </div>
+
     <div id="lobby-menu">
         <div class="panel">
             <h3 style="color:#4facfe; margin:0 0 15px 0;">GARAGE</h3>
             <input type="text" id="driver-name" placeholder="DRIVER NAME">
-            <button onclick="startRace()" style="background:#4facfe; color:white; margin-bottom:10px;">RACE NOW</button>
+            <button onclick="startRace()" style="background:#4facfe; color:white; margin-bottom:10px;">START CAREER</button>
             <div id="car-list"></div>
             <button id="promo-btn" onclick="redeemCode()">REDEEM PROMO CODE</button>
         </div>
@@ -59,14 +75,14 @@
         <div id="countdown">3</div>
         <div id="progress-track"><div id="player-icon" class="tracker-icon"></div></div>
         <div id="boost-container">
-            <div id="boost-label">HYBRID DRIVE</div>
+            <div id="boost-label">NITRO / HYBRID DRIVE</div>
             <div id="boost-bar"></div>
         </div>
         <div id="mph-display"><div id="mph-num">0</div><div style="font-size: 18px; color: #4facfe; letter-spacing: 5px;">MPH</div></div>
     </div>
 
     <div id="podium-screen">
-        <h1 id="win-status" style="color:#ffcc00; font-size: 40px; margin:0;">RACE RESULTS</h1>
+        <h1 style="color:#ffcc00; font-size: 40px; margin:0;">RACE RESULTS</h1>
         <div class="podium-box" id="podium-list"></div>
         <button onclick="location.reload()" style="width: 280px; margin-top: 40px;">RETURN TO GARAGE</button>
     </div>
@@ -106,10 +122,22 @@ let owned = JSON.parse(localStorage.getItem('f_owned')) || new Array(carModels.l
 owned[0] = true;
 let selIdx = parseInt(localStorage.getItem('f_sel')) || 0;
 let dName = localStorage.getItem('f_name') || "ACE";
-document.getElementById('driver-name').value = dName;
 
 let boostCharge = 100;
 let isBoosting = false;
+let player = { dist: 0, speed: 0, worldX: 0, model: carModels[selIdx], crashed: false, crashTimer: 0 };
+let cpus = [];
+let keys = {};
+let state = "SPLASH";
+let active = false;
+let shake = 0;
+
+function enterLobby() {
+    document.getElementById("splash-screen").style.display = "none";
+    document.getElementById("lobby-menu").style.display = "flex";
+    state = "LOBBY";
+    updateUI();
+}
 
 function redeemCode() {
     let code = prompt("ENTER PROMO CODE:").toUpperCase();
@@ -118,18 +146,11 @@ function redeemCode() {
 }
 
 const RACE_DIST = 1000000; 
-let player = { dist: 0, speed: 0, worldX: 0, model: carModels[selIdx], crashed: false, crashTimer: 0 };
-let cpus = [];
-let particles = [];
-let keys = {};
-let state = "LOBBY";
-let active = false;
-let isCountingDown = false;
-let shake = 0;
 
 function updateUI() {
     document.getElementById("cash-display").innerText = "$" + cash.toLocaleString();
     document.getElementById("car-name-top").innerText = carModels[selIdx].name;
+    document.getElementById('driver-name').value = dName;
     const list = document.getElementById("car-list"); list.innerHTML = "";
     carModels.forEach((m, i) => {
         let isSel = (selIdx === i);
@@ -150,7 +171,7 @@ function startRace() {
     dName = document.getElementById('driver-name').value || "DRIVER";
     localStorage.setItem('f_name', dName);
     state = "RACE"; player.dist = 0; player.speed = 0; player.worldX = 0; player.crashed = false;
-    active = false; isCountingDown = true; boostCharge = 100;
+    active = false; boostCharge = 100;
     
     document.getElementById("lobby-menu").style.display = "none";
     document.getElementById("game-hud").style.display = "block";
@@ -181,13 +202,12 @@ function startRace() {
 
     let count = 3;
     const cd = document.getElementById("countdown");
-    cd.style.display = "block";
-    cd.innerText = count;
+    cd.style.display = "block"; cd.innerText = count;
     let timer = setInterval(() => {
         count--;
         if(count > 0) cd.innerText = count;
         else if(count === 0) cd.innerText = "GO!";
-        else { cd.style.display = "none"; active = true; isCountingDown = false; clearInterval(timer); }
+        else { cd.style.display = "none"; active = true; clearInterval(timer); }
     }, 1000);
 }
 
@@ -208,7 +228,9 @@ function loop() {
     if(shake > 0) { ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake); shake *= 0.9; }
     ctx.fillStyle = "#0a0a0a"; ctx.fillRect(0,0,canvas.width, canvas.height);
 
-    if (state === "LOBBY") drawCar(canvas.width/2, canvas.height * 0.7, 2.2, carModels[selIdx].color, false, false);
+    if (state === "LOBBY") {
+        drawCar(canvas.width/2, canvas.height * 0.7, 2.2, carModels[selIdx].color, false, false);
+    } 
     else if (state === "RACE") {
         if(player.dist >= RACE_DIST) { 
             state = "PODIUM"; 
@@ -289,7 +311,7 @@ function loop() {
 function save() { localStorage.setItem('f_cash', cash); localStorage.setItem('f_owned', JSON.stringify(owned)); localStorage.setItem('f_sel', selIdx); localStorage.setItem('f_name', dName); }
 window.onkeydown = e => { keys[e.key.toLowerCase()] = true; if(e.key === "Shift") keys.shift = true; };
 window.onkeyup = e => { keys[e.key.toLowerCase()] = false; if(e.key === "Shift") keys.shift = false; };
-updateUI(); loop();
+loop();
 </script>
 </body>
 </html>
