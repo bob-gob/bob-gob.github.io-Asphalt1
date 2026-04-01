@@ -8,7 +8,6 @@
         canvas { display: block; width: 100vw; height: 100vh; position: absolute; z-index: 1; }
         #ui-layer { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
         
-        /* Splash Screen */
         #splash-screen { 
             position: absolute; inset: 0; 
             background: radial-gradient(circle, #1a1a1a 0%, #000 100%); 
@@ -17,7 +16,6 @@
         }
         #splash-screen h1 { font-size: 60px; text-align: center; margin-bottom: 40px; color: #4facfe; text-shadow: 0 0 20px #4facfe; }
 
-        /* Lobby/Garage */
         #lobby-menu { position: absolute; inset: 0; display: none; align-items: center; justify-content: space-between; padding: 0 40px; background: radial-gradient(circle, #111 0%, #000 100%); pointer-events: auto; }
         .panel { width: 340px; background: rgba(10,10,10,0.95); border: 2px solid #4facfe; padding: 25px; border-radius: 15px; }
         
@@ -117,11 +115,14 @@ const carModels = [
     { name: "BUGATTI BOLIDE", price: 5000000, color: "#00d4ff", speed: 112, acc: 0.95, hybrid: false }
 ];
 
+// DATA LOADING
 let cash = parseInt(localStorage.getItem('f_cash')) || 0;
 let owned = JSON.parse(localStorage.getItem('f_owned')) || new Array(carModels.length).fill(false);
 owned[0] = true;
 let selIdx = parseInt(localStorage.getItem('f_sel')) || 0;
 let dName = localStorage.getItem('f_name') || "ACE";
+// Load used codes tracker
+let usedCodes = JSON.parse(localStorage.getItem('f_used_codes')) || {};
 
 let boostCharge = 100;
 let isBoosting = false;
@@ -141,8 +142,24 @@ function enterLobby() {
 
 function redeemCode() {
     let code = prompt("ENTER PROMO CODE:").toUpperCase();
-    if (code === "#BOBGOBISTHEBEST#") { owned[11] = true; save(); updateUI(); alert("UNLOCKED: HURACÁN!"); }
-    else if (code === "#HEARTBOBGOBRESPOSITORIES#") { cash += 200000; save(); updateUI(); alert("ADDED: $200,000!"); }
+    
+    if (usedCodes[code]) {
+        alert("THIS CODE HAS ALREADY BEEN USED!");
+        return;
+    }
+
+    if (code === "#BOBGOBISTHEBEST#") { 
+        owned[11] = true; 
+        usedCodes[code] = true;
+        save(); updateUI(); alert("UNLOCKED: HURACÁN!"); 
+    }
+    else if (code === "#HEARTBOBGOBRESPOSITORIES#") { 
+        cash += 200000; 
+        usedCodes[code] = true;
+        save(); updateUI(); alert("ADDED: $200,000!"); 
+    } else {
+        alert("INVALID CODE");
+    }
 }
 
 const RACE_DIST = 1000000; 
@@ -288,7 +305,6 @@ function loop() {
             }
         });
 
-        // Road
         ctx.fillStyle = "#151515"; ctx.beginPath();
         ctx.moveTo(canvas.width/2 - 800, canvas.height); ctx.lineTo(canvas.width/2, canvas.height*0.4); ctx.lineTo(canvas.width/2+800, canvas.height); ctx.fill();
         
@@ -308,7 +324,13 @@ function loop() {
     ctx.restore(); requestAnimationFrame(loop);
 }
 
-function save() { localStorage.setItem('f_cash', cash); localStorage.setItem('f_owned', JSON.stringify(owned)); localStorage.setItem('f_sel', selIdx); localStorage.setItem('f_name', dName); }
+function save() { 
+    localStorage.setItem('f_cash', cash); 
+    localStorage.setItem('f_owned', JSON.stringify(owned)); 
+    localStorage.setItem('f_sel', selIdx); 
+    localStorage.setItem('f_name', dName); 
+    localStorage.setItem('f_used_codes', JSON.stringify(usedCodes));
+}
 window.onkeydown = e => { keys[e.key.toLowerCase()] = true; if(e.key === "Shift") keys.shift = true; };
 window.onkeyup = e => { keys[e.key.toLowerCase()] = false; if(e.key === "Shift") keys.shift = false; };
 loop();
