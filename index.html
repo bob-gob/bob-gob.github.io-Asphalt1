@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Asphalt 1 BETA</title>
+    <title>Asphalt 1: The New Arising</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Orbitron', sans-serif; color: white; }
@@ -45,7 +45,7 @@
         <div class="panel">
             <h3 style="color:#4facfe; margin:0 0 15px 0;">GARAGE</h3>
             <input type="text" id="driver-name" placeholder="DRIVER NAME">
-            <button onclick="startRace()" style="background:#4facfe; color:white; margin-bottom:10px;">ENTER TOURNAMENT</button>
+            <button onclick="startRace()" style="background:#4facfe; color:white; margin-bottom:10px;">RACE NOW</button>
             <div id="car-list"></div>
             <button id="promo-btn" onclick="redeemCode()">REDEEM PROMO CODE</button>
         </div>
@@ -57,9 +57,7 @@
 
     <div id="game-hud">
         <div id="countdown">3</div>
-        <div id="progress-track">
-            <div id="player-icon" class="tracker-icon"></div>
-        </div>
+        <div id="progress-track"><div id="player-icon" class="tracker-icon"></div></div>
         <div id="boost-container">
             <div id="boost-label">HYBRID DRIVE</div>
             <div id="boost-bar"></div>
@@ -94,12 +92,13 @@ const carModels = [
     { name: "LAMBORGHINI MURCIELAGO", price: 110000, color: "#ff6600", speed: 82, acc: 0.52, hybrid: false },
     { name: "GEMERA", price: 150000, color: "#2c3e50", speed: 84, acc: 0.58, hybrid: true },
     { name: "MCLAREN ARTURA", price: 220000, color: "#dfff00", speed: 85, acc: 0.60, hybrid: true },
+    { name: "LAMBORGHINI HURACAN", price: 350000, color: "#39ff14", speed: 86, acc: 0.68, hybrid: false },
     { name: "PORSCHE 918 SPYDER", price: 450000, color: "#9e9e9e", speed: 89, acc: 0.70, hybrid: true },
     { name: "TAYCAN TURBO GT", price: 550000, color: "#8e44ad", speed: 92, acc: 0.78, hybrid: true },
     { name: "MCLAREN W1", price: 1200000, color: "#ff8c00", speed: 96, acc: 0.70, hybrid: true },
     { name: "FERRARI F80", price: 1500000, color: "#ff0000", speed: 98, acc: 0.72, hybrid: true },
-    { name: "LAMBORGHINI HURACAN", price: 450000, color: "#39ff14", speed: 86, acc: 0.68, hybrid: false },
-    { name: "BUGATTI", price: 2000000, color: "#00ffff", speed: 105, acc: 0.65, hybrid: false }
+    { name: "BUGATTI CHIRON SS", price: 3500000, color: "#001a4d", speed: 115, acc: 0.62, hybrid: false },
+    { name: "BUGATTI BOLIDE", price: 5000000, color: "#00d4ff", speed: 112, acc: 0.95, hybrid: false }
 ];
 
 let cash = parseInt(localStorage.getItem('f_cash')) || 0;
@@ -114,14 +113,8 @@ let isBoosting = false;
 
 function redeemCode() {
     let code = prompt("ENTER PROMO CODE:").toUpperCase();
-    if (code === "#BOBGOBISTHEBEST#") { 
-        alert("UNLOCKED: LAMBORGHINI HURACÁN!"); 
-        owned[15] = true; save(); updateUI(); 
-    }
-    else if (code === "#HEARTBOBGOBRESPOSITORIES#") { 
-        alert("REWARD: $200,000 ADDED!"); 
-        cash += 200000; save(); updateUI(); 
-    }
+    if (code === "#BOBGOBISTHEBEST#") { owned[11] = true; save(); updateUI(); alert("UNLOCKED: HURACÁN!"); }
+    else if (code === "#HEARTBOBGOBRESPOSITORIES#") { cash += 200000; save(); updateUI(); alert("ADDED: $200,000!"); }
 }
 
 const RACE_DIST = 1000000; 
@@ -172,11 +165,13 @@ function startRace() {
     for(let i=0; i<6; i++) {
         let id = "cpu" + i;
         track.innerHTML += `<div id="${id}-icon" class="tracker-icon cpu-icon"></div>`;
+        let xPos = (i % 2 === 0) ? -0.8 : 0.8; 
+        let staggerBack = -5000 * (i + 1); 
         cpus.push({
             id: id,
             name: names[i],
-            dist: -3000 * (i+1), // Start behind player
-            x: (i % 2 === 0 ? -0.8 : 0.8), // Staggered spread
+            dist: staggerBack, 
+            x: xPos,
             speed: 0,
             target: player.model.speed * (0.88 + Math.random() * 0.12),
             color: colors[i],
@@ -228,7 +223,7 @@ function loop() {
                     ${i+1}
                 </div>`;
             });
-            if(res[0].n === dName) cash += 8000; else cash += 1000;
+            if(res[0].n === dName) cash += 10000; else cash += 2000;
             save(); return; 
         }
 
@@ -256,7 +251,7 @@ function loop() {
 
         player.dist += player.speed * 20;
         player.worldX = Math.max(-1.4, Math.min(1.4, player.worldX));
-        document.getElementById("player-icon").style.left = (player.dist / RACE_DIST * 100) + "%";
+        document.getElementById("player-icon").style.left = (Math.max(0, player.dist) / RACE_DIST * 100) + "%";
         
         cpus.forEach(c => {
             if(active) {
@@ -266,8 +261,7 @@ function loop() {
             c.dist += c.speed * 19;
             document.getElementById(c.id+"-icon").style.left = (Math.max(0, c.dist) / RACE_DIST * 100) + "%";
             
-            // Only check collision if race is ACTIVE
-            if(active && Math.abs(c.dist - player.dist) < 1500 && Math.abs(c.x - player.worldX) < 0.5) {
+            if(active && c.dist > -1000 && Math.abs(c.dist - player.dist) < 1500 && Math.abs(c.x - player.worldX) < 0.5) {
                 player.crashed = true; player.crashTimer = Date.now() + 800; player.speed *= 0.5; shake = 15;
             }
         });
@@ -278,7 +272,7 @@ function loop() {
         
         cpus.forEach(c => {
             let pZ = c.dist - player.dist;
-            if(pZ > -2000 && pZ < 40000) {
+            if(pZ > -2500 && pZ < 40000) {
                 let s = canvas.height / Math.max(100, pZ + 5000);
                 drawCar(canvas.width/2 + (c.x - player.worldX) * s * 600, (canvas.height*0.4)+(s*400), s*2.8, c.color, c.crashed, false);
             }
