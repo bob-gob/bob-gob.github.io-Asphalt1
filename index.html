@@ -21,7 +21,7 @@
         
         #game-hud { position: absolute; inset: 0; display: none; padding: 20px; }
         #progress-track { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); width: 70%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; }
-        .tracker-icon { position: absolute; width: 10px; height: 10px; border-radius: 50%; top: -3px; border: 1px solid #000; pointer-events: none; }
+        .tracker-icon { position: absolute; width: 10px; height: 10px; border-radius: 50%; top: -3px; border: 1px solid #000; transition: left 0.1s linear; }
         #player-icon { background: #4facfe; z-index: 10; width: 14px; height: 14px; top: -5px; box-shadow: 0 0 10px #4facfe; }
         .cpu-icon { background: #ff4444; }
 
@@ -42,8 +42,6 @@
         button:hover { filter: brightness(1.2); }
         .active-sel { background: #4facfe !important; box-shadow: 0 0 15px #4facfe; }
         input { background: #1a1a1a; border: 1px solid #333; color: white; padding: 12px; font-family: 'Orbitron'; width: 88%; margin-bottom: 12px; }
-        
-        #promo-btn { background: #ffcc00; color: #000; margin-top: 15px; font-size: 12px; padding: 8px; }
         #car-list { max-height: 250px; overflow-y: auto; scrollbar-width: thin; }
     </style>
 </head>
@@ -61,20 +59,18 @@
             <input type="text" id="driver-name" placeholder="DRIVER NAME">
             <button id="race-btn" onclick="startRace()" style="background:#4facfe; color:white; margin-bottom:10px;">START RACE</button>
             <div id="car-list"></div>
-            <button id="promo-btn" onclick="redeemCode()">REDEEM PROMO CODE</button>
+            <button style="background: #ffcc00; color: #000; font-size: 11px;" onclick="redeemCode()">PROMO CODE</button>
         </div>
         <div style="text-align:right;">
-            <h1 id="car-name-top" style="font-size: 40px; margin:0; width: 500px; overflow: hidden;">CAR NAME</h1>
+            <h1 id="car-name-top" style="font-size: 32px; margin:0;">CAR NAME</h1>
             <h2 id="cash-display" style="color:#ffcc00;">$0</h2>
-            <p id="boss-status" style="color:#4facfe; font-size:12px;"></p>
+            <p id="boss-status" style="color:#4facfe; font-size:12px; letter-spacing:1px;"></p>
         </div>
     </div>
 
     <div id="game-hud">
         <div id="countdown">3</div>
-        <div id="progress-track">
-            <div id="player-icon" class="tracker-icon"></div>
-        </div>
+        <div id="progress-track"><div id="player-icon" class="tracker-icon"></div></div>
         <div id="boost-container">
             <div id="boost-label">NITRO / HYBRID DRIVE</div>
             <div id="boost-bar"></div>
@@ -114,6 +110,7 @@ const carModels = [
     { name: "TAYCAN TURBO GT", price: 550000, color: "#8e44ad", speed: 92, acc: 0.78, hybrid: true },
     { name: "MCLAREN W1", price: 1200000, color: "#ff8c00", speed: 96, acc: 0.70, hybrid: true },
     { name: "FERRARI F80", price: 1500000, color: "#ff0000", speed: 98, acc: 0.72, hybrid: true },
+    { name: "FERRARI 849 TESTAROSSA", price: 2200000, color: "#990000", speed: 105, acc: 0.85, hybrid: true },
     { name: "BUGATTI CHIRON SS", price: 3500000, color: "#001a4d", speed: 115, acc: 0.62, hybrid: false },
     { name: "BUGATTI BOLIDE", price: 5000000, color: "#00d4ff", speed: 112, acc: 0.95, hybrid: false }
 ];
@@ -144,8 +141,7 @@ function enterLobby() {
 }
 
 function backToLobby() {
-    state = "LOBBY";
-    active = false;
+    state = "LOBBY"; active = false;
     document.getElementById("podium-screen").style.display = "none";
     document.getElementById("game-hud").style.display = "none";
     document.getElementById("lobby-menu").style.display = "flex";
@@ -154,10 +150,9 @@ function backToLobby() {
 
 function redeemCode() {
     let code = prompt("ENTER PROMO CODE:").toUpperCase();
-    if (usedCodes[code]) { alert("CODE ALREADY USED!"); return; }
-    if (code === "#BOBGOBISTHEBEST#") { owned[11] = true; usedCodes[code] = true; alert("UNLOCKED: HURACÁN!"); }
+    if (usedCodes[code]) { alert("ALREADY REDEEMED"); return; }
+    if (code === "#BOBGOBISTHEBEST#") { owned[11] = true; usedCodes[code] = true; alert("HURACÁN UNLOCKED!"); }
     else if (code === "#HEARTBOBGOBRESPOSITORIES#") { cash += 200000; usedCodes[code] = true; alert("+$200,000!"); }
-    else { alert("INVALID CODE"); return; }
     save(); updateUI();
 }
 
@@ -165,18 +160,16 @@ function updateUI() {
     document.getElementById("cash-display").innerText = "$" + cash.toLocaleString();
     document.getElementById("car-name-top").innerText = carModels[selIdx].name;
     document.getElementById('driver-name').value = dName;
-    
-    const isBoss = !bossBeaten[selIdx];
-    document.getElementById("race-btn").innerText = isBoss ? "BOSS CHALLENGE" : "START CAREER";
-    document.getElementById("boss-status").innerText = isBoss ? "STATUS: BOSS NOT DEFEATED" : "STATUS: CAR UNLOCKED";
-
+    const isB = !bossBeaten[selIdx];
+    document.getElementById("race-btn").innerText = isB ? "BOSS CHALLENGE" : "START CAREER";
+    document.getElementById("boss-status").innerText = isB ? "BOSS CERTIFICATION REQUIRED" : "CAR CERTIFIED";
     const list = document.getElementById("car-list"); list.innerHTML = "";
     carModels.forEach((m, i) => {
-        let isSel = (selIdx === i);
-        let btnColor = owned[i] ? (isSel ? "#4facfe" : "#111") : (cash >= m.price ? "#4facfe" : "#333");
-        list.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-size:9px; width: 140px;">${m.name}</span>
-            <button onclick="${owned[i]?'selectCar('+i+')':'buyCar('+i+')'}" class="${isSel?'active-sel':''}" style="width:110px; font-size:10px; padding:8px; background:${btnColor}">${owned[i]?(isSel?'SELECTED':'SELECT'):'$'+m.price.toLocaleString()}</button>
+        let isS = (selIdx === i);
+        let col = owned[i] ? (isS ? "#4facfe" : "#111") : (cash >= m.price ? "#4facfe" : "#333");
+        list.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; align-items:center;">
+            <span style="font-size:9px; width:150px;">${m.name}</span>
+            <button onclick="${owned[i]?'selectCar('+i+')':'buyCar('+i+')'}" style="width:100px; font-size:10px; background:${col}">${owned[i]?(isS?'SELECTED':'SELECT'):'$'+m.price.toLocaleString()}</button>
         </div>`;
     });
 }
@@ -184,85 +177,53 @@ function updateUI() {
 function selectCar(i) { selIdx = i; player.model = carModels[i]; save(); updateUI(); }
 function buyCar(i) { if(cash >= carModels[i].price) { cash -= carModels[i].price; owned[i] = true; selectCar(i); } }
 
-const RACE_DIST = 1000000; 
+const RACE_DIST = 1000000;
 
 function startRace() {
     dName = document.getElementById('driver-name').value || "DRIVER";
     localStorage.setItem('f_name', dName);
+    state = "RACE"; active = false; player.dist = 0; player.speed = 0; player.worldX = 0; player.crashed = false; boostCharge = 100;
     
-    // Safety Reset
-    state = "RACE"; 
-    player.dist = 0; 
-    player.speed = 0; 
-    player.worldX = 0; 
-    player.crashed = false;
-    active = false; 
-    boostCharge = 100;
-    cpus = []; 
-
     document.getElementById("lobby-menu").style.display = "none";
     document.getElementById("game-hud").style.display = "block";
-    
-    // Clear and Re-inject track icons to prevent "phantom" icons
     const track = document.getElementById("progress-track");
     track.innerHTML = '<div id="player-icon" class="tracker-icon"></div>';
 
+    cpus = [];
     if (!bossBeaten[selIdx]) {
-        // BOSS SETUP
-        track.innerHTML += `<div id="boss-icon" class="tracker-icon" style="background:#ffcc00; width:16px; height:16px; top:-6px; z-index:11;"></div>`;
-        cpus.push({ 
-            id: "boss-icon", 
-            name: "BOSS", 
-            dist: -2000, 
-            x: 0, 
-            speed: 0, 
-            target: player.model.speed * (player.model.hybrid ? 1.15 : 1.10), 
-            color: "#000", 
-            crashed: false, 
-            isBoss: true, 
-            acc: player.model.acc * 1.6 
-        });
+        let id = "boss-icon";
+        track.innerHTML += `<div id="${id}" class="tracker-icon" style="background:#ffcc00; width:16px; height:16px; top:-6px; z-index:15;"></div>`;
+        cpus.push({ id, name: "BOSS", dist: -2000, x: 0, speed: 0, target: player.model.speed * 1.10, color: "#111", acc: player.model.acc * 1.5, isBoss: true });
     } else {
-        // CAREER SETUP
         const names = ["VIPER", "SHADOW", "BLITZ", "RAZOR", "GHOST", "HUNTER"];
         for(let i=0; i<6; i++) {
-            let id = "cpu-icon-" + i;
+            let id = "cpu-" + i;
             track.innerHTML += `<div id="${id}" class="tracker-icon cpu-icon"></div>`;
-            cpus.push({ 
-                id: id, 
-                name: names[i], 
-                dist: -5000 * (i + 1), 
-                x: (i%2==0?-0.8:0.8), 
-                speed: 0, 
-                target: player.model.speed * (0.95 + Math.random()*0.12), 
-                color: "#444", 
-                crashed: false, 
-                isBoss: false, 
-                acc: 0.42 
-            });
+            cpus.push({ id, name: names[i], dist: -5000 * (i+1), x: (i%2==0?-0.8:0.8), speed: 0, target: player.model.speed * (0.95+Math.random()*0.12), color: "#444", acc: 0.42 });
         }
     }
 
-    let count = 3;
-    const cd = document.getElementById("countdown");
-    cd.style.display = "block"; cd.innerText = count;
-    let timer = setInterval(() => {
-        count--;
-        if(count > 0) cd.innerText = count;
-        else if(count === 0) cd.innerText = "GO!";
-        else { cd.style.display = "none"; active = true; clearInterval(timer); }
-    }, 1000);
+    // DELAY START TO ENSURE DOM RENDERING
+    setTimeout(() => {
+        let c = 3;
+        const cd = document.getElementById("countdown");
+        cd.style.display = "block"; cd.innerText = c;
+        let t = setInterval(() => {
+            c--;
+            if(c > 0) cd.innerText = c;
+            else if(c === 0) cd.innerText = "GO!";
+            else { cd.style.display = "none"; active = true; clearInterval(t); }
+        }, 1000);
+    }, 50);
 }
 
-function drawCar(x, y, scale, color, isWrecked, braking) {
+function drawCar(x, y, scale, color, isW, brk) {
     let w = 210 * scale, h = 85 * scale;
     ctx.save(); ctx.translate(x, y);
-    if(isWrecked) ctx.rotate((Math.random()-0.5)*0.3);
+    if(isW) ctx.rotate((Math.random()-0.5)*0.25);
     ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(-w/2, -h/4, w, h/2, 8*scale); ctx.fill();
     ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.beginPath(); ctx.moveTo(-w*0.2, -h/4); ctx.lineTo(w*0.2, -h/4); ctx.lineTo(w*0.12, -h/1.2); ctx.lineTo(-w*0.12, -h/1.2); ctx.fill();
-    let lc = braking ? "#f00" : "#500";
-    ctx.shadowBlur = braking ? 15 : 0; ctx.shadowColor = "red";
-    ctx.fillStyle = lc; ctx.fillRect(-w*0.48, -h/6, w/6, h/10); ctx.fillRect(w*0.48 - w/6, -h/6, w/6, h/10); 
+    ctx.fillStyle = brk ? "#f00" : "#500"; ctx.fillRect(-w*0.48, -h/6, w/6, h/10); ctx.fillRect(w*0.42, -h/6, w/6, h/10);
     ctx.restore();
 }
 
@@ -275,91 +236,82 @@ function loop() {
         drawCar(canvas.width/2, canvas.height * 0.7, 2.2, carModels[selIdx].color, false, false);
     } 
     else if (state === "RACE") {
-        if(player.dist >= RACE_DIST) { 
-            state = "PODIUM"; 
+        if(player.dist >= RACE_DIST) {
+            state = "PODIUM";
             let res = [{n: dName, d: player.dist}, ...cpus.map(c => ({n: c.name, d: c.dist}))].sort((a,b)=>b.d-a.d);
             
             if (!bossBeaten[selIdx] && res[0].n === dName) {
                 bossBeaten[selIdx] = true;
                 document.getElementById("win-status").innerText = "BOSS DEFEATED!";
-                cash += 15000;
+                cash += 20000;
             } else {
                 document.getElementById("win-status").innerText = "RACE RESULTS";
-                cash += (res[0].n === dName) ? 10000 : 2000;
+                cash += (res[0].n === dName) ? 12000 : 3000;
             }
-
-            document.getElementById("game-hud").style.display = "none"; 
+            
+            document.getElementById("game-hud").style.display = "none";
             document.getElementById("podium-screen").style.display = "flex";
-            const pList = document.getElementById("podium-list"); pList.innerHTML = "";
-            res.forEach((r, i) => {
-                let h = 200 - (i * 20);
-                pList.innerHTML += `<div class="step ${i===0?'p1':''}" style="height:${h}px"><div style="position:absolute; top:-30px; width:100%; text-align:center;">${r.n}</div>${i+1}</div>`;
-            });
-            save(); return; 
+            const pL = document.getElementById("podium-list"); pL.innerHTML = "";
+            res.forEach((r, i) => { if(i < 3) pL.innerHTML += `<div class="step" style="height:${180-i*40}px"><div>${r.n}</div>${i+1}</div>`; });
+            save(); return;
         }
 
         document.getElementById("boost-container").style.display = player.model.hybrid ? "block" : "none";
-        let braking = false;
+        let brk = false;
         if(active && !player.crashed) {
-            let max = player.model.speed, acc = player.model.acc;
-            if (player.model.hybrid && keys.shift && boostCharge > 0 && (keys.arrowup || keys.w)) {
-                isBoosting = true; max += 15; acc *= 2.2; boostCharge -= 0.6; shake = 3; 
-            } else { isBoosting = false; if (boostCharge < 100) boostCharge += 0.15; }
-            if(keys.arrowup || keys.w) player.speed = Math.min(player.speed + acc, max);
-            else { player.speed *= 0.985; braking = true; }
+            let m = player.model.speed, a = player.model.acc;
+            if(player.model.hybrid && keys.shift && boostCharge > 0) { isBoosting = true; m += 18; a *= 2.4; boostCharge -= 0.65; shake = 3; }
+            else { isBoosting = false; if(boostCharge < 100) boostCharge += 0.22; }
+            if(keys.arrowup || keys.w) player.speed = Math.min(player.speed + a, m);
+            else { player.speed *= 0.982; brk = true; }
             if(keys.arrowleft || keys.a) player.worldX -= 0.07;
             if(keys.arrowright || keys.d) player.worldX += 0.07;
             document.getElementById("boost-bar").style.width = boostCharge + "%";
-        } else if (player.crashed) { player.speed *= 0.95; if(Date.now() > player.crashTimer) player.crashed = false; }
+        } else if(player.crashed) { player.speed *= 0.95; if(Date.now() > player.crashTimer) player.crashed = false; }
 
         player.dist += player.speed * 20;
         player.worldX = Math.max(-1.4, Math.min(1.4, player.worldX));
         
-        let pIcon = document.getElementById("player-icon");
-        if(pIcon) pIcon.style.left = (Math.max(0, player.dist) / RACE_DIST * 100) + "%";
-        
+        let pI = document.getElementById("player-icon");
+        if(pI) pI.style.left = (Math.max(0, player.dist) / RACE_DIST * 100) + "%";
+
         cpus.forEach(c => {
-            if(active) {
-                if(!c.crashed) {
-                    let band = (player.dist - c.dist > 3000) ? 1.25 : 1.0;
-                    c.speed = Math.min(c.speed + (c.acc || 0.42), c.target * band);
-                } else { c.speed *= 0.92; if(Date.now() > c.crashTimer) c.crashed = false; }
+            if(active && !c.crashed) {
+                let bnd = (player.dist - c.dist > 3500) ? 1.25 : 1.0;
+                c.speed = Math.min(c.speed + (c.acc || 0.4), c.target * bnd);
             }
-            c.dist += c.speed * 19.5;
+            c.dist += c.speed * 19.8;
+            let ci = document.getElementById(c.id);
+            if(ci) ci.style.left = (Math.max(0, c.dist) / RACE_DIST * 100) + "%";
             
-            let icon = document.getElementById(c.id);
-            if(icon) icon.style.left = (Math.max(0, c.dist) / RACE_DIST * 100) + "%";
-            
-            if(active && !c.crashed && !player.crashed && Math.abs(c.dist - player.dist) < 1500 && Math.abs(c.x - player.worldX) < 0.5) {
-                player.crashed = true; player.crashTimer = Date.now() + 800; player.speed *= 0.5; shake = 15;
+            if(active && !c.crashed && !player.crashed && Math.abs(c.dist-player.dist) < 1400 && Math.abs(c.x-player.worldX) < 0.45) {
+                player.crashed = true; player.crashTimer = Date.now() + 900; player.speed *= 0.4; shake = 15;
             }
         });
 
-        ctx.fillStyle = "#151515"; ctx.beginPath();
-        ctx.moveTo(canvas.width/2 - 800, canvas.height); ctx.lineTo(canvas.width/2, canvas.height*0.4); ctx.lineTo(canvas.width/2+800, canvas.height); ctx.fill();
+        ctx.fillStyle = "#151515"; ctx.beginPath(); ctx.moveTo(canvas.width/2-800, canvas.height); ctx.lineTo(canvas.width/2, canvas.height*0.4); ctx.lineTo(canvas.width/2+800, canvas.height); ctx.fill();
         cpus.forEach(c => {
             let pZ = c.dist - player.dist;
-            if(pZ > -2500 && pZ < 40000) {
+            if(pZ > -2500 && pZ < 45000) {
                 let s = canvas.height / Math.max(100, pZ + 5000);
-                drawCar(canvas.width/2 + (c.x - player.worldX) * s * 600, (canvas.height*0.4)+(s*400), s*2.8, c.color, c.crashed, false);
+                drawCar(canvas.width/2 + (c.x-player.worldX)*s*600, (canvas.height*0.4)+(s*400), s*2.7, c.color, c.crashed, false);
             }
         });
-        if (isBoosting) { ctx.shadowBlur = 30; ctx.shadowColor = "#00f2ff"; }
-        drawCar(canvas.width/2, canvas.height-180, 1.4, player.model.color, player.crashed, braking);
+        if(isBoosting) { ctx.shadowBlur = 20; ctx.shadowColor = "#00f2ff"; }
+        drawCar(canvas.width/2, canvas.height-180, 1.4, player.model.color, player.crashed, brk);
         ctx.shadowBlur = 0;
         document.getElementById("mph-num").innerText = Math.floor(player.speed * 4.8);
     }
     ctx.restore(); requestAnimationFrame(loop);
 }
 
-function save() { 
-    localStorage.setItem('f_cash', cash); localStorage.setItem('f_owned', JSON.stringify(owned)); 
-    localStorage.setItem('f_sel', selIdx); localStorage.setItem('f_name', dName); 
+function save() {
+    localStorage.setItem('f_cash', cash); localStorage.setItem('f_owned', JSON.stringify(owned));
+    localStorage.setItem('f_sel', selIdx); localStorage.setItem('f_boss', JSON.stringify(bossBeaten));
     localStorage.setItem('f_used_codes', JSON.stringify(usedCodes));
-    localStorage.setItem('f_boss', JSON.stringify(bossBeaten));
 }
-window.onkeydown = e => { keys[e.key.toLowerCase()] = true; if(e.key === "Shift") keys.shift = true; };
-window.onkeyup = e => { keys[e.key.toLowerCase()] = false; if(e.key === "Shift") keys.shift = false; };
+window.onkeydown = e => keys[e.key.toLowerCase()] = true;
+window.onkeyup = e => keys[e.key.toLowerCase()] = false;
 loop();
 </script>
 </body>
